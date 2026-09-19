@@ -1,147 +1,194 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Calendar, Stethoscope, HeartPulse, CheckCircle2 } from 'lucide-react'
+import {
+  Activity,
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CirclePlus,
+  Clock3,
+  Ellipsis,
+  Heart,
+  Leaf,
+  Plus,
+  RefreshCw,
+  Stethoscope,
+  UserRound,
+  UsersRound,
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 export const Route = createFileRoute('/')({
-  component: LandingPage,
+  component: AgendaPage,
 })
 
-function LandingPage() {
+type AppointmentTone = 'pink' | 'green' | 'purple' | 'orange' | 'blue'
+
+type Appointment = {
+  day: number
+  time: string
+  patient: string
+  label: string
+  tone: AppointmentTone
+  icon: 'user' | 'repeat' | 'exam' | 'procedure'
+  completed?: boolean
+  more?: boolean
+}
+
+const appointments: Appointment[] = [
+  { day: 30, time: '09:00', patient: 'Silvia Leticia de Moraes', label: 'Consulta', tone: 'pink', icon: 'user', completed: true },
+  { day: 30, time: '10:00', patient: 'Ana Paula Costa', label: 'Consulta', tone: 'purple', icon: 'user', completed: true },
+  { day: 1, time: '09:00', patient: 'David', label: 'Teleconsulta', tone: 'blue', icon: 'user', more: true },
+  { day: 4, time: '14:00', patient: 'Juliana', label: 'Retorno', tone: 'green', icon: 'repeat' },
+  { day: 7, time: '08:30', patient: 'Consulta ginecológica', label: 'Consulta', tone: 'pink', icon: 'procedure' },
+  { day: 10, time: '09:00', patient: 'Silvia Leticia de Moraes', label: 'Consulta', tone: 'pink', icon: 'user', completed: true },
+  { day: 10, time: '10:00', patient: 'David', label: 'Consulta', tone: 'blue', icon: 'user', completed: true },
+  { day: 11, time: '15:30', patient: 'Exame preventivo', label: 'Exame', tone: 'purple', icon: 'exam' },
+  { day: 14, time: '11:00', patient: 'Ana Paula Costa', label: 'Consulta', tone: 'green', icon: 'procedure', completed: true },
+  { day: 16, time: '09:00', patient: 'Ana', label: 'Retorno', tone: 'pink', icon: 'repeat', more: true },
+  { day: 21, time: '10:00', patient: 'Consulta ginecológica', label: 'Consulta', tone: 'orange', icon: 'procedure' },
+  { day: 23, time: '14:30', patient: 'Camila', label: 'Retorno', tone: 'green', icon: 'repeat', more: true },
+  { day: 25, time: '09:00', patient: 'Ultrassonografia', label: 'Procedimento', tone: 'pink', icon: 'exam' },
+  { day: 28, time: '16:00', patient: 'Consulta nova', label: 'Consulta', tone: 'purple', icon: 'user' },
+  { day: 30, time: '10:00', patient: 'Patrícia', label: 'Retorno', tone: 'blue', icon: 'repeat', more: true },
+]
+
+const toneStyles: Record<AppointmentTone, { card: string; icon: string; text: string }> = {
+  pink: { card: 'bg-[#fce1ee]', icon: 'text-[#e52d72]', text: 'text-[#542442]' },
+  green: { card: 'bg-[#dff4ef]', icon: 'text-[#0c8f73]', text: 'text-[#126454]' },
+  purple: { card: 'bg-[#ebe4ff]', icon: 'text-[#6541d8]', text: 'text-[#403080]' },
+  orange: { card: 'bg-[#ffeadc]', icon: 'text-[#e76715]', text: 'text-[#934313]' },
+  blue: { card: 'bg-[#dcecff]', icon: 'text-[#1675da]', text: 'text-[#19466f]' },
+}
+
+const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
+const calendarDays = [
+  { day: 30, outside: true },
+  { day: 31, outside: true },
+  ...Array.from({ length: 30 }, (_, index) => ({ day: index + 1, outside: false })),
+  { day: 1, outside: true },
+  { day: 2, outside: true },
+  { day: 3, outside: true },
+]
+
+function AppointmentIcon({ type }: { type: Appointment['icon'] }) {
+  if (type === 'repeat') return <RefreshCw className="h-5 w-5" />
+  if (type === 'exam') return <Activity className="h-5 w-5" />
+  if (type === 'procedure') return <Stethoscope className="h-5 w-5" />
+  return <UserRound className="h-5 w-5" />
+}
+
+function AgendaPage() {
+  const [selectedView, setSelectedView] = useState('Mês')
+  const [monthOffset, setMonthOffset] = useState(0)
+
+  const monthLabel = useMemo(() => {
+    const date = new Date(2026, 8 + monthOffset, 1)
+    return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
+      .format(date)
+      .replace(/^./, (letter) => letter.toUpperCase())
+  }, [monthOffset])
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Identidade Visual / Header */}
-      <header className="py-8 px-10 md:px-20 flex items-center justify-between bg-white shadow-sm sticky top-0 z-50">
-        <div className="flex items-center gap-4 hover:scale-105 transition-transform cursor-pointer">
-          <HeartPulse className="w-12 h-12 md:w-16 md:h-16 text-rose-600" />
-          <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">ClinicCare</h1>
-        </div>
-        <nav className="hidden xl:block">
-          <ul className="flex space-x-16 text-2xl font-bold text-slate-600">
-            <li><a href="#services" className="hover:text-rose-600 transition-colors">Especialidades</a></li>
-            <li><a href="#about" className="hover:text-rose-600 transition-colors">Sobre Nós</a></li>
-            <li><a href="#contact" className="hover:text-rose-600 transition-colors">Contato</a></li>
-          </ul>
-        </nav>
-        <button className="hidden lg:flex items-center gap-4 bg-rose-600 hover:bg-rose-700 text-white px-10 py-5 rounded-full font-black text-2xl transition-all shadow-md hover:shadow-lg transform hover:-translate-y-1">
-          <Calendar className="w-8 h-8" />
-          Agendar Agora
-        </button>
-      </header>
-
-      <main>
-        {/* Hero Section */}
-        <section className="relative bg-white pt-36 pb-48 px-10 overflow-hidden">
-          <div className="absolute inset-0 bg-rose-50/50 -skew-y-3 transform origin-top-left -z-10" />
-          <div className="max-w-7xl mx-auto text-center flex flex-col items-center">
-            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-rose-100 text-rose-700 font-bold mb-12 text-2xl shadow-sm">
-              <span className="relative flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500"></span>
-              </span>
-              Atendimento Humanizado
-            </div>
-            <h2 className="text-6xl md:text-8xl lg:text-[7rem] font-extrabold text-slate-900 leading-[1.05] mb-12 tracking-tight max-w-6xl">
-              Sua saúde e bem-estar <br className="hidden lg:block"/> 
-              em <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-pink-500">excelentes mãos</span>.
-            </h2>
-            <p className="text-3xl md:text-4xl text-slate-600 mb-20 max-w-5xl leading-relaxed font-semibold">
-              Descubra uma nova forma de cuidar de si mesma com especialistas dedicados ao atendimento acolhedor, moderno e 100% focado em você.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-8 w-full justify-center max-w-4xl mx-auto">
-              <button className="flex-1 bg-rose-600 text-white text-3xl font-black py-8 px-12 rounded-full shadow-2xl hover:shadow-rose-500/50 hover:bg-rose-700 transform hover:-translate-y-2 transition-all duration-300">
-                Agendar Consulta
+    <div className="min-h-screen bg-[#fffafb] px-4 py-5 font-sans text-[#30313f] sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px]">
+        <header className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-5 rounded-2xl border border-[#f2e9ee] bg-white px-5 py-4 shadow-[0_8px_24px_rgba(116,55,89,0.04)]">
+              <button aria-label="Mês anterior" onClick={() => setMonthOffset((value) => value - 1)} className="text-[#e24782] transition hover:scale-110">
+                <ChevronLeft className="h-6 w-6" />
               </button>
-              <button className="flex-1 bg-white text-slate-800 border-4 border-slate-200 text-3xl font-black py-8 px-12 rounded-full shadow-sm hover:border-rose-300 hover:bg-rose-50 transition-all duration-300">
-                Nossos Serviços
+              <button className="border-l border-[#f2e9ee] pl-5 text-base font-bold text-[#60304f]">Hoje</button>
+              <button aria-label="Próximo mês" onClick={() => setMonthOffset((value) => value + 1)} className="text-[#e24782] transition hover:scale-110">
+                <ChevronRight className="h-6 w-6" />
               </button>
             </div>
+            <div className="hidden sm:block">
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#54213f] sm:text-3xl">{monthLabel}</h1>
+              <p className="mt-1 flex items-center gap-2 text-sm font-medium text-[#b17899] sm:text-base">
+                Cuidando da sua saúde, em todas as fases da vida <Heart className="h-4 w-4 text-[#ec5d99]" />
+              </p>
+            </div>
           </div>
-        </section>
 
-        {/* Serviços / Benefícios */}
-        <section id="services" className="py-40 px-10 max-w-[90rem] mx-auto">
-          <div className="text-center mb-32">
-            <h3 className="text-6xl md:text-7xl lg:text-8xl font-black text-slate-900 mb-10">Como podemos ajudar?</h3>
-            <p className="text-3xl md:text-4xl text-slate-500 max-w-4xl mx-auto font-semibold leading-normal">
-              Oferecemos um portfólio completo de cuidados focados exclusivamente na saúde feminina.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 lg:gap-20">
-            {/* Card 1 */}
-            <div className="bg-white p-16 rounded-[3rem] shadow-lg border border-slate-100 hover:shadow-2xl transition-all duration-300 group">
-              <div className="w-24 h-24 bg-rose-100 rounded-[2rem] flex items-center justify-center text-rose-600 mb-12 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                <Stethoscope className="w-12 h-12" />
-              </div>
-              <h4 className="text-5xl font-extrabold text-slate-900 mb-8">Consultas</h4>
-              <p className="text-3xl text-slate-600 leading-relaxed font-medium">
-                Atendimento preventivo e de rotina, avaliando seu histórico para uma abordagem totalmente individualizada.
-              </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex rounded-2xl bg-[#f8f1f5] p-1.5">
+              {['Dia', 'Semana', 'Mês', 'Lista'].map((view) => (
+                <button key={view} onClick={() => setSelectedView(view)} className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${selectedView === view ? 'bg-[#d93275] text-white shadow-md' : 'text-[#66465b] hover:bg-white'}`}>
+                  {view}
+                </button>
+              ))}
             </div>
-            
-            {/* Card 2 */}
-            <div className="bg-white p-16 rounded-[3rem] shadow-lg border border-slate-100 hover:shadow-2xl transition-all duration-300 group relative overflow-hidden">
-              <div className="absolute -bottom-10 -right-10 p-8 opacity-[0.03]">
-                <HeartPulse className="w-80 h-80" />
-              </div>
-              <div className="w-24 h-24 bg-rose-100 rounded-[2rem] flex items-center justify-center text-rose-600 mb-12 group-hover:scale-110 transition-transform duration-300 shadow-inner relative z-10">
-                <CheckCircle2 className="w-12 h-12" />
-              </div>
-              <h4 className="text-5xl font-extrabold text-slate-900 mb-8 relative z-10">Diagnósticos</h4>
-              <p className="text-3xl text-slate-600 leading-relaxed font-medium relative z-10">
-                Exames preventivos e acompanhamentos laboratoriais estruturados para detectar alterações precocemente.
-              </p>
-            </div>
-            
-            {/* Card 3 */}
-            <div className="bg-white p-16 rounded-[3rem] shadow-lg border border-slate-100 hover:shadow-2xl transition-all duration-300 group">
-              <div className="w-24 h-24 bg-rose-100 rounded-[2rem] flex items-center justify-center text-rose-600 mb-12 group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                <Calendar className="w-12 h-12" />
-              </div>
-              <h4 className="text-5xl font-extrabold text-slate-900 mb-8">Pré-Natal</h4>
-              <p className="text-3xl text-slate-600 leading-relaxed font-medium">
-                Cuidado integral, seguro e acolhedor para gestantes, garantindo total tranquilidade da concepção ao parto.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Call to Action */}
-        <section className="bg-rose-600 text-white py-40 px-10 mt-20">
-          <div className="max-w-7xl mx-auto text-center">
-            <h3 className="text-6xl md:text-7xl lg:text-8xl font-black mb-12 leading-[1.1] tracking-tight">Pronta para colocar sua saúde em primeiro lugar?</h3>
-            <p className="text-4xl text-rose-100 mb-20 max-w-5xl mx-auto font-semibold leading-relaxed">
-              Fale conosco hoje mesmo. Agende de forma rápida e prática pelo WhatsApp ou pela nossa plataforma web.
-            </p>
-            <button className="bg-white text-rose-600 text-4xl font-black py-10 px-20 rounded-full shadow-2xl hover:bg-slate-50 transform hover:scale-[1.03] transition-all duration-300">
-              Marcar Minha Consulta
+            <button className="flex items-center justify-center gap-3 rounded-2xl border border-[#f0e3e9] bg-white px-5 py-3 text-sm font-bold text-[#5e4055] shadow-sm">
+              <UsersRound className="h-5 w-5 text-[#e83f7d]" />
+              Todos os médicos
+              <ChevronDown className="ml-3 h-4 w-4 text-[#db3c78]" />
+            </button>
+            <button className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#c52d6c] to-[#e74788] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(214,47,112,0.25)] transition hover:-translate-y-0.5">
+              <Plus className="h-5 w-5" /> Nova consulta
             </button>
           </div>
-        </section>
-      </main>
+        </header>
 
-      {/* Footer */}
-      <footer id="contact" className="bg-slate-900 text-white py-32 px-10">
-        <div className="max-w-[90rem] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 lg:gap-32">
-          <div>
-            <div className="flex items-center gap-5 mb-14">
-              <HeartPulse className="w-16 h-16 text-rose-500" />
-              <h4 className="text-6xl font-black tracking-tight">ClinicCare</h4>
-            </div>
-            <p className="text-3xl text-slate-400 font-semibold mb-6">Av. Paulista, 1000 - São Paulo, SP</p>
-            <p className="text-3xl text-slate-400 font-semibold mb-12">Segunda a Sexta, 08:00 às 18:00</p>
-          </div>
-          <div className="lg:text-right flex flex-col justify-center">
-            <p className="text-4xl mb-8 font-bold text-slate-300">Fale com nossa equipe</p>
-            <a href="mailto:contato@cliniccare.com.br" className="text-4xl md:text-5xl text-rose-500 hover:text-rose-400 font-black mb-8 block transition-colors">
-              contato@cliniccare.com.br
-            </a>
-            <p className="text-4xl md:text-5xl font-black text-white">(11) 99999-9999</p>
-          </div>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard icon={<CalendarDays />} value="12" label="Consultas hoje" tone="pink" />
+          <StatCard icon={<UsersRound />} value="328" label="Pacientes ativas" tone="green" />
+          <StatCard icon={<Heart />} value="96%" label="Taxa de comparecimento" tone="purple" />
+          <StatCard icon={<Clock3 />} value="8" label="Encaixes disponíveis" tone="orange" />
         </div>
-        <div className="max-w-[90rem] mx-auto border-t-2 border-slate-800 mt-28 pt-12 text-center text-slate-500 text-3xl font-medium">
-          &copy; {new Date().getFullYear()} ClinicCare. Todos os direitos reservados.
-        </div>
-      </footer>
+
+        <section className="relative mt-5 overflow-hidden rounded-2xl border border-[#f1e7ec] bg-white shadow-[0_10px_30px_rgba(117,52,87,0.05)]">
+          <div className="grid grid-cols-7 border-b border-[#f0e7eb] bg-[#fffdfd]">
+            {weekdays.map((weekday, index) => (
+              <div key={weekday} className={`py-3 text-center text-sm font-extrabold ${index === 0 ? 'text-[#f05c99]' : 'text-[#444553]'}`}>{weekday}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {calendarDays.map((calendarDay, index) => {
+              const dayAppointments = appointments.filter((appointment) => appointment.day === calendarDay.day && !calendarDay.outside)
+              const isToday = calendarDay.day === 19 && !calendarDay.outside
+              const isEmptyHighlight = calendarDay.day === 19 && !calendarDay.outside
+              return (
+                <div key={`${calendarDay.day}-${index}`} className={`relative min-h-[145px] border-b border-r border-[#f0e7eb] p-2 sm:min-h-[166px] sm:p-3 ${calendarDay.outside ? 'bg-[#fffdfd] text-[#aaaab4]' : 'bg-white'} ${isEmptyHighlight ? 'bg-[#fffafd]' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-sm font-bold ${isToday ? 'bg-[#d82d72] text-white' : calendarDay.outside ? 'text-[#a7a7b0]' : 'text-[#353644]'}`}>{calendarDay.day}</span>
+                    <button aria-label={`Adicionar consulta no dia ${calendarDay.day}`} className="text-[#a9a5af] transition hover:text-[#d83375]"><CirclePlus className="h-4 w-4" /></button>
+                  </div>
+                  <div className="mt-3 space-y-1.5">
+                    {dayAppointments.map((appointment, appointmentIndex) => <AppointmentCard key={`${appointment.day}-${appointment.time}-${appointmentIndex}`} appointment={appointment} />)}
+                    {isEmptyHighlight && <div className="flex h-[90px] flex-col items-center justify-center rounded-xl border border-[#f18db4] bg-[#fff7fb] px-2 text-center text-[#bc6388]"><span className="text-sm font-bold">Nenhuma consulta</span><span className="mt-1 text-xs">Que tal aproveitar<br />para se organizar? ✨</span></div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        <footer className="flex flex-col gap-4 px-2 py-5 text-xs font-medium text-[#8d8992] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <Legend color="bg-[#f05ca0]" label="Consulta" />
+            <Legend color="bg-[#70cdb6]" label="Retorno" />
+            <Legend color="bg-[#9d82ed]" label="Exame" />
+            <Legend color="bg-[#ffb080]" label="Procedimento" />
+            <Legend color="bg-[#5aa9f7]" label="Teleconsulta" />
+          </div>
+          <div className="flex items-center gap-2">Saúde feminina <span>•</span> Informação <span>•</span> Bem-estar <span>•</span> Sempre com você <Heart className="h-4 w-4 fill-[#f15a98] text-[#f15a98]" /></div>
+        </footer>
+      </div>
     </div>
   )
+}
+
+function StatCard({ icon, value, label, tone }: { icon: React.ReactNode; value: string; label: string; tone: AppointmentTone }) {
+  const styles = { pink: 'bg-[#fff0f6] text-[#d52a6d]', green: 'bg-[#ecfaf6] text-[#087f68]', purple: 'bg-[#f2efff] text-[#4c36b6]', orange: 'bg-[#fff2e8] text-[#d96514]' }
+  return <div className={`flex items-center gap-4 rounded-2xl px-5 py-4 ${styles[tone]}`}><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/70">{icon}</div><div><div className="text-2xl font-extrabold leading-none">{value}</div><div className="mt-1 text-sm font-semibold opacity-80">{label}</div></div></div>
+}
+
+function AppointmentCard({ appointment }: { appointment: Appointment }) {
+  const style = toneStyles[appointment.tone]
+  return <div className={`group relative flex items-center gap-2 rounded-xl px-2.5 py-2 ${style.card} ${style.text}`}><div className={style.icon}><AppointmentIcon type={appointment.icon} /></div><div className="min-w-0 flex-1 leading-tight"><div className="text-sm font-extrabold">{appointment.time}</div><div className="truncate text-xs font-semibold">{appointment.patient}</div></div>{appointment.completed && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#11a879] text-[11px] font-bold text-white">✓</span>}{appointment.more && <Ellipsis className="h-4 w-4 shrink-0" />}</div>
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return <span className="flex items-center gap-2"><span className={`h-3.5 w-3.5 rounded-full ${color}`} />{label}</span>
 }
