@@ -17,6 +17,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { AppointmentPanels, localDate, useConsultationAgenda } from '../components/ConsultationWorkflow'
 
 export const Route = createFileRoute('/')({
   component: AgendaPage,
@@ -25,6 +26,8 @@ export const Route = createFileRoute('/')({
 type AppointmentTone = 'pink' | 'green' | 'purple' | 'orange' | 'blue'
 
 type Appointment = {
+  id: string
+  dateKey: string
   day: number
   time: string
   patient: string
@@ -35,24 +38,6 @@ type Appointment = {
   more?: boolean
 }
 
-const appointments: Appointment[] = [
-  { day: 30, time: '09:00', patient: 'Silvia Leticia de Moraes', label: 'Consulta', tone: 'pink', icon: 'user', completed: true },
-  { day: 30, time: '10:00', patient: 'Ana Paula Costa', label: 'Consulta', tone: 'purple', icon: 'user', completed: true },
-  { day: 1, time: '09:00', patient: 'David', label: 'Teleconsulta', tone: 'blue', icon: 'user', more: true },
-  { day: 4, time: '14:00', patient: 'Juliana', label: 'Retorno', tone: 'green', icon: 'repeat' },
-  { day: 7, time: '08:30', patient: 'Consulta ginecológica', label: 'Consulta', tone: 'pink', icon: 'procedure' },
-  { day: 10, time: '09:00', patient: 'Silvia Leticia de Moraes', label: 'Consulta', tone: 'pink', icon: 'user', completed: true },
-  { day: 10, time: '10:00', patient: 'David', label: 'Consulta', tone: 'blue', icon: 'user', completed: true },
-  { day: 11, time: '15:30', patient: 'Exame preventivo', label: 'Exame', tone: 'purple', icon: 'exam' },
-  { day: 14, time: '11:00', patient: 'Ana Paula Costa', label: 'Consulta', tone: 'green', icon: 'procedure', completed: true },
-  { day: 16, time: '09:00', patient: 'Ana', label: 'Retorno', tone: 'pink', icon: 'repeat', more: true },
-  { day: 21, time: '10:00', patient: 'Consulta ginecológica', label: 'Consulta', tone: 'orange', icon: 'procedure' },
-  { day: 23, time: '14:30', patient: 'Camila', label: 'Retorno', tone: 'green', icon: 'repeat', more: true },
-  { day: 25, time: '09:00', patient: 'Ultrassonografia', label: 'Procedimento', tone: 'pink', icon: 'exam' },
-  { day: 28, time: '16:00', patient: 'Consulta nova', label: 'Consulta', tone: 'purple', icon: 'user' },
-  { day: 30, time: '10:00', patient: 'Patrícia', label: 'Retorno', tone: 'blue', icon: 'repeat', more: true },
-]
-
 const toneStyles: Record<AppointmentTone, { card: string; icon: string; text: string }> = {
   pink: { card: 'bg-[#fce1ee]', icon: 'text-[#e52d72]', text: 'text-[#542442]' },
   green: { card: 'bg-[#dff4ef]', icon: 'text-[#0c8f73]', text: 'text-[#126454]' },
@@ -62,14 +47,6 @@ const toneStyles: Record<AppointmentTone, { card: string; icon: string; text: st
 }
 
 const weekdays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
-const calendarDays = [
-  { day: 30, outside: true },
-  { day: 31, outside: true },
-  ...Array.from({ length: 30 }, (_, index) => ({ day: index + 1, outside: false })),
-  { day: 1, outside: true },
-  { day: 2, outside: true },
-  { day: 3, outside: true },
-]
 
 function AppointmentIcon({ type }: { type: Appointment['icon'] }) {
   if (type === 'repeat') return <RefreshCw className="h-5 w-5" />
@@ -81,13 +58,25 @@ function AppointmentIcon({ type }: { type: Appointment['icon'] }) {
 function AgendaPage() {
   const [selectedView, setSelectedView] = useState('Mês')
   const [monthOffset, setMonthOffset] = useState(0)
+  const [baseMonth] = useState(() => new Date())
+  const month = useMemo(() => new Date(baseMonth.getFullYear(), baseMonth.getMonth() + monthOffset, 1), [baseMonth, monthOffset])
+  const agenda = useConsultationAgenda(month)
+  const appointments = agenda.appointments
+  const today = localDate(new Date())
+  const calendarDays = useMemo(() => {
+    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
+    const count = Math.ceil((month.getDay() + daysInMonth) / 7) * 7
+    return Array.from({ length: count }, (_, index) => {
+      const date = new Date(month.getFullYear(), month.getMonth(), index - month.getDay() + 1)
+      return { day: date.getDate(), dateKey: localDate(date), outside: date.getMonth() !== month.getMonth() }
+    })
+  }, [month])
 
   const monthLabel = useMemo(() => {
-    const date = new Date(2026, 8 + monthOffset, 1)
     return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
-      .format(date)
+      .format(month)
       .replace(/^./, (letter) => letter.toUpperCase())
-  }, [monthOffset])
+  }, [month])
 
   return (
     <div className="min-h-screen bg-[#fffafb] px-4 py-5 font-sans text-[#30313f] sm:px-6 lg:px-8">
@@ -98,7 +87,7 @@ function AgendaPage() {
               <button aria-label="Mês anterior" onClick={() => setMonthOffset((value) => value - 1)} className="text-[#e24782] transition hover:scale-110">
                 <ChevronLeft className="h-6 w-6" />
               </button>
-              <button className="border-l border-[#f2e9ee] pl-5 text-base font-bold text-[#60304f]">Hoje</button>
+              <button onClick={() => { const now = new Date(); setMonthOffset((now.getFullYear() - baseMonth.getFullYear()) * 12 + now.getMonth() - baseMonth.getMonth()) }} className="border-l border-[#f2e9ee] pl-5 text-base font-bold text-[#60304f]">Hoje</button>
               <button aria-label="Próximo mês" onClick={() => setMonthOffset((value) => value + 1)} className="text-[#e24782] transition hover:scale-110">
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -119,19 +108,24 @@ function AgendaPage() {
                 </button>
               ))}
             </div>
-            <button className="flex items-center justify-center gap-3 rounded-2xl border border-[#f0e3e9] bg-white px-5 py-3 text-sm font-bold text-[#5e4055] shadow-sm">
-              <UsersRound className="h-5 w-5 text-[#e83f7d]" />
-              Todos os médicos
-              <ChevronDown className="ml-3 h-4 w-4 text-[#db3c78]" />
-            </button>
-            <button className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#c52d6c] to-[#e74788] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(214,47,112,0.25)] transition hover:-translate-y-0.5">
+            <label className="relative flex items-center justify-center gap-3 rounded-2xl border border-[#f0e3e9] bg-white px-5 py-3 text-sm font-bold text-[#5e4055] shadow-sm">
+              <UsersRound className="h-5 w-5 shrink-0 text-[#e83f7d]" />
+              <select aria-label="Médica da agenda" disabled={!agenda.ready} value={agenda.doctorId} onChange={event => agenda.setDoctorId(event.target.value)} className="w-full max-w-52 appearance-none bg-white pr-6 outline-none focus:ring-2 focus:ring-[#d93275] disabled:opacity-50">
+                <option value="">Todos os médicos</option>
+                {agenda.doctors.map(doctor => <option key={doctor.id} value={doctor.id}>{doctor.full_name}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 h-4 w-4 text-[#db3c78]" />
+            </label>
+            <button disabled={!agenda.ready} onClick={() => agenda.openNew(today)} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#c52d6c] to-[#e74788] px-5 py-3 text-sm font-bold text-white shadow-[0_8px_18px_rgba(214,47,112,0.25)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
               <Plus className="h-5 w-5" /> Nova consulta
             </button>
           </div>
         </header>
 
+        <AppointmentPanels agenda={agenda} />
+
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard icon={<CalendarDays />} value="12" label="Consultas hoje" tone="pink" />
+          <StatCard icon={<CalendarDays />} value={String(appointments.filter(appointment => appointment.dateKey === today).length)} label="Consultas hoje nesta agenda" tone="pink" />
           <StatCard icon={<UsersRound />} value="328" label="Pacientes ativas" tone="green" />
           <StatCard icon={<Heart />} value="96%" label="Taxa de comparecimento" tone="purple" />
           <StatCard icon={<Clock3 />} value="8" label="Encaixes disponíveis" tone="orange" />
@@ -145,17 +139,17 @@ function AgendaPage() {
           </div>
           <div className="grid grid-cols-7">
             {calendarDays.map((calendarDay, index) => {
-              const dayAppointments = appointments.filter((appointment) => appointment.day === calendarDay.day && !calendarDay.outside)
-              const isToday = calendarDay.day === 19 && !calendarDay.outside
-              const isEmptyHighlight = calendarDay.day === 19 && !calendarDay.outside
+              const dayAppointments = appointments.filter((appointment) => appointment.dateKey === calendarDay.dateKey)
+              const isToday = calendarDay.dateKey === today
+              const isEmptyHighlight = isToday && dayAppointments.length === 0 && agenda.ready && !agenda.loading && !agenda.error
               return (
                 <div key={`${calendarDay.day}-${index}`} className={`relative min-h-[145px] border-b border-r border-[#f0e7eb] p-2 sm:min-h-[166px] sm:p-3 ${calendarDay.outside ? 'bg-[#fffdfd] text-[#aaaab4]' : 'bg-white'} ${isEmptyHighlight ? 'bg-[#fffafd]' : ''}`}>
                   <div className="flex items-center justify-between">
                     <span className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-sm font-bold ${isToday ? 'bg-[#d82d72] text-white' : calendarDay.outside ? 'text-[#a7a7b0]' : 'text-[#353644]'}`}>{calendarDay.day}</span>
-                    <button aria-label={`Adicionar consulta no dia ${calendarDay.day}`} className="text-[#a9a5af] transition hover:text-[#d83375]"><CirclePlus className="h-4 w-4" /></button>
+                    <button disabled={!agenda.ready} onClick={() => agenda.openNew(calendarDay.dateKey)} aria-label={`Adicionar consulta em ${calendarDay.dateKey}`} className="text-[#a9a5af] transition hover:text-[#d83375] disabled:cursor-not-allowed disabled:opacity-40"><CirclePlus className="h-4 w-4" /></button>
                   </div>
                   <div className="mt-3 space-y-1.5">
-                    {dayAppointments.map((appointment, appointmentIndex) => <AppointmentCard key={`${appointment.day}-${appointment.time}-${appointmentIndex}`} appointment={appointment} />)}
+                    {dayAppointments.map((appointment) => <AppointmentCard key={appointment.id} appointment={appointment} onClick={() => agenda.openAppointment(appointment.id)} />)}
                     {isEmptyHighlight && <div className="flex h-[90px] flex-col items-center justify-center rounded-xl border border-[#f18db4] bg-[#fff7fb] px-2 text-center text-[#bc6388]"><span className="text-sm font-bold">Nenhuma consulta</span><span className="mt-1 text-xs">Que tal aproveitar<br />para se organizar? ✨</span></div>}
                   </div>
                 </div>
@@ -184,9 +178,9 @@ function StatCard({ icon, value, label, tone }: { icon: React.ReactNode; value: 
   return <div className={`flex items-center gap-4 rounded-2xl px-5 py-4 ${styles[tone]}`}><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/70">{icon}</div><div><div className="text-2xl font-extrabold leading-none">{value}</div><div className="mt-1 text-sm font-semibold opacity-80">{label}</div></div></div>
 }
 
-function AppointmentCard({ appointment }: { appointment: Appointment }) {
+function AppointmentCard({ appointment, onClick }: { appointment: Appointment; onClick: () => void }) {
   const style = toneStyles[appointment.tone]
-  return <div className={`group relative flex items-center gap-2 rounded-xl px-2.5 py-2 ${style.card} ${style.text}`}><div className={style.icon}><AppointmentIcon type={appointment.icon} /></div><div className="min-w-0 flex-1 leading-tight"><div className="text-sm font-extrabold">{appointment.time}</div><div className="truncate text-xs font-semibold">{appointment.patient}</div></div>{appointment.completed && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#11a879] text-[11px] font-bold text-white">✓</span>}{appointment.more && <Ellipsis className="h-4 w-4 shrink-0" />}</div>
+  return <button type="button" onClick={onClick} title={`${appointment.time} · ${appointment.patient} · ${appointment.label}`} aria-label={`Abrir ficha de ${appointment.patient}, ${appointment.time}`} className={`group relative flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[#d93275] ${style.card} ${style.text}`}><span className={style.icon}><AppointmentIcon type={appointment.icon} /></span><span className="min-w-0 flex-1 leading-tight"><span className="block text-sm font-extrabold">{appointment.time}</span><span className="block truncate text-xs font-semibold">{appointment.patient}</span></span>{appointment.completed && <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#11a879] text-[11px] font-bold text-white">✓</span>}{appointment.more && <Ellipsis className="h-4 w-4 shrink-0" />}</button>
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
